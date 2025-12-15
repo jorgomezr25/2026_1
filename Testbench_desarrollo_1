@@ -1,0 +1,76 @@
+-- =====================================================
+--                EJERCICIO DE DESARROLLO
+--                  Práctica 3 2026 -I 
+--                      TESTBENCH
+-- =====================================================
+
+library IEEE;
+use IEEE.STD_LOGIC_1164.ALL;
+
+entity tb_luz_inteligente is
+end entity;
+
+architecture sim of tb_luz_inteligente is
+
+    -- Señales de prueba
+    signal sensor : std_logic := '0';
+    signal boton  : std_logic := '0';
+    signal led    : std_logic;
+
+    -- Instancia del componente
+    component luz_inteligente
+        port (
+            sensor : in std_logic;
+            boton  : in std_logic;
+            led    : out std_logic
+        );
+    end component;
+
+begin
+
+    -- Mapear el DUT (Device Under Test)
+    DUT: luz_inteligente
+        port map (
+            sensor => sensor,
+            boton  => boton,
+            led    => led
+        );
+
+    -- Proceso de estimulación
+    stim_proc: process
+    begin
+        report "Inicio de simulación del sistema de luces.";
+
+        -- Prueba 1: nadie y botón apagado → LED apagado
+        sensor <= '0'; boton <= '0';
+        wait for 10 ns;
+        assert led = '0'
+            report "Error: LED encendido cuando no debería."
+            severity warning;
+
+        -- Prueba 2: hay presencia pero botón apagado → LED apagado
+        sensor <= '1'; boton <= '0';
+        wait for 10 ns;
+        assert led = '0'
+            report "Error: LED encendido sin botón presionado."
+            severity warning;
+
+        -- Prueba 3: hay presencia y botón encendido → LED encendido
+        sensor <= '1'; boton <= '1';
+        wait for 10 ns;
+        assert led = '1'
+            report "Error: LED no se encendió cuando debía."
+            severity warning;
+
+        -- Prueba 4: sin presencia pero con botón → LED apagado
+        sensor <= '0'; boton <= '1';
+        wait for 10 ns;
+        assert led = '0'
+            report "Error: LED encendido sin presencia."
+            severity warning;
+
+        report "Fin de simulación exitosa.";
+        wait;
+    end process;
+
+end architecture sim;
