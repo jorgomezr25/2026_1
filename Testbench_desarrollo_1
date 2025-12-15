@@ -3,21 +3,21 @@
 --                  Práctica 3 2026 -I 
 --                      TESTBENCH
 -- =====================================================
-
 library IEEE;
 use IEEE.STD_LOGIC_1164.ALL;
 
+-- Entidad vacía del testbench (no tiene puertos)
 entity tb_luz_inteligente is
 end entity;
 
 architecture sim of tb_luz_inteligente is
 
-    -- Señales de prueba
+    -- Declaración de señales internas que se conectarán al DUT
     signal sensor : std_logic := '0';
     signal boton  : std_logic := '0';
     signal led    : std_logic;
 
-    -- Instancia del componente
+    -- Declaración del componente bajo prueba (DUT)
     component luz_inteligente
         port (
             sensor : in std_logic;
@@ -28,7 +28,7 @@ architecture sim of tb_luz_inteligente is
 
 begin
 
-    -- Mapear el DUT (Device Under Test)
+    -- Instanciación del DUT y mapeo de señales
     DUT: luz_inteligente
         port map (
             sensor => sensor,
@@ -36,41 +36,56 @@ begin
             led    => led
         );
 
-    -- Proceso de estimulación
+    -- Proceso de estimulación: se ejecuta automáticamente al iniciar la simulación
     stim_proc: process
     begin
         report "Inicio de simulación del sistema de luces.";
 
-        -- Prueba 1: nadie y botón apagado → LED apagado
+        -- ================================================
+        -- CASO 1: sensor = 0, boton = 0  led = 0
         sensor <= '0'; boton <= '0';
         wait for 10 ns;
+
+        -- Reporta los valores de las señales en consola
+        report "Caso 1 - sensor=0, boton=0 => led=" & std_logic'image(led);
+        -- Verifica que la salida sea la esperada
         assert led = '0'
-            report "Error: LED encendido cuando no debería."
+            report "Error: LED encendido cuando ambos están apagados"
             severity warning;
 
-        -- Prueba 2: hay presencia pero botón apagado → LED apagado
+        -- ================================================
+        -- CASO 2: sensor = 1, boton = 0 led = 0
         sensor <= '1'; boton <= '0';
         wait for 10 ns;
+
+        report "Caso 2 - sensor=1, boton=0 => led=" & std_logic'image(led);
         assert led = '0'
-            report "Error: LED encendido sin botón presionado."
+            report "Error: LED encendido solo con sensor activo"
             severity warning;
 
-        -- Prueba 3: hay presencia y botón encendido → LED encendido
-        sensor <= '1'; boton <= '1';
-        wait for 10 ns;
-        assert led = '1'
-            report "Error: LED no se encendió cuando debía."
-            severity warning;
-
-        -- Prueba 4: sin presencia pero con botón → LED apagado
+        -- ================================================
+        -- CASO 3: sensor = 0, boton = 1 led = 0
         sensor <= '0'; boton <= '1';
         wait for 10 ns;
+
+        report "Caso 3 - sensor=0, boton=1 => led=" & std_logic'image(led);
         assert led = '0'
-            report "Error: LED encendido sin presencia."
+            report "Error: LED encendido solo con botón presionado"
+            severity warning;
+
+        -- ================================================
+        -- CASO 4: sensor = 1, boton = 1 led = 1
+        sensor <= '1'; boton <= '1';
+        wait for 10 ns;
+
+        report "Caso 4 - sensor=1, boton=1 => led=" & std_logic'image(led);
+        assert led = '1'
+            report "Error: LED no encendido cuando ambos están activos"
             severity warning;
 
         report "Fin de simulación exitosa.";
-        wait;
+        wait;  -- Finaliza el proceso sin salir
+
     end process;
 
 end architecture sim;
