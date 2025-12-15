@@ -49,9 +49,7 @@ begin
         -- Reporta los valores de las señales en consola
         report "Caso 1 - sensor=0, boton=0 => led=" & std_logic'image(led);
         -- Verifica que la salida sea la esperada
-        assert led = '0'
-            report "Error: LED encendido cuando ambos están apagados"
-            severity warning;
+        assert led = '0';
 
         -- ================================================
         -- CASO 2: sensor = 1, boton = 0 led = 0
@@ -59,29 +57,23 @@ begin
         wait for 10 ns;
 
         report "Caso 2 - sensor=1, boton=0 => led=" & std_logic'image(led);
-        assert led = '0'
-            report "Error: LED encendido solo con sensor activo"
-            severity warning;
-
+        assert led = '0';
+    
         -- ================================================
         -- CASO 3: sensor = 0, boton = 1 led = 0
         sensor <= '0'; boton <= '1';
         wait for 10 ns;
 
         report "Caso 3 - sensor=0, boton=1 => led=" & std_logic'image(led);
-        assert led = '0'
-            report "Error: LED encendido solo con botón presionado"
-            severity warning;
-
+        assert led = '0';
+    
         -- ================================================
         -- CASO 4: sensor = 1, boton = 1 led = 1
         sensor <= '1'; boton <= '1';
         wait for 10 ns;
 
         report "Caso 4 - sensor=1, boton=1 => led=" & std_logic'image(led);
-        assert led = '1'
-            report "Error: LED no encendido cuando ambos están activos"
-            severity warning;
+        assert led = '1';
 
         report "Fin de simulación exitosa.";
         wait;  -- Finaliza el proceso sin salir
