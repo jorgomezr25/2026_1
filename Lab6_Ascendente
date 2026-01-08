@@ -1,0 +1,62 @@
+library ieee;
+use ieee.std_logic_1164.all;
+use ieee.numeric_std.all;
+
+entity top_counter_0_15_1hz is
+  generic (
+    CLK_HZ : integer := 100_000_000  -- Basys3
+  );
+  port (
+    CLK100MHZ : in  std_logic;
+    BTNC      : in  std_logic;                 -- reset
+    LED       : out std_logic_vector(15 downto 0)
+  );
+end entity;
+
+architecture rtl of top_counter_0_15_1hz is
+  -- contador para tick de 1 segundo
+  signal sec_cnt : unsigned(26 downto 0) := (others => '0');
+  signal tick_1s : std_logic := '0';
+
+  -- contador 0..15
+  signal q : unsigned(3 downto 0) := (others => '0');
+begin
+
+  -- Generador de pulso cada 1 segundo (tick_1s = 1 por 1 ciclo)
+  process(CLK100MHZ)
+  begin
+    if rising_edge(CLK100MHZ) then
+      if BTNC = '1' then
+        sec_cnt <= (others => '0');
+        tick_1s <= '0';
+      else
+        if sec_cnt = to_unsigned(CLK_HZ - 1, sec_cnt'length) then
+          sec_cnt <= (others => '0');
+          tick_1s <= '1';
+        else
+          sec_cnt <= sec_cnt + 1;
+          tick_1s <= '0';
+        end if;
+      end if;
+    end if;
+  end process;
+
+  -- Contador ascendente 0..15 (incrementa en cada tick)
+  process(CLK100MHZ)
+  begin
+    if rising_edge(CLK100MHZ) then
+      if BTNC = '1' then
+        q <= (others => '0');
+      else
+        if tick_1s = '1' then
+          q <= q + 1;  -- overflow natural: 15 -> 0
+        end if;
+      end if;
+    end if;
+  end process;
+
+  -- Salida a LEDs (LED3..LED0 muestran el conteo)
+  LED(3 downto 0)  <= std_logic_vector(q);
+  LED(15 downto 4) <= (others => '0');
+
+end architecture;
