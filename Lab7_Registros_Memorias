@@ -1,0 +1,279 @@
+-- btn_pulse.vhd
+library ieee;
+use ieee.std_logic_1164.all;
+
+entity btn_pulse is
+  port (
+    clk   : in  std_logic;
+    rst   : in  std_logic;   -- reset síncrono
+    btn   : in  std_logic;
+    pulse : out std_logic
+  );
+end entity;
+
+architecture rtl of btn_pulse is
+  signal ff1, ff2 : std_logic := '0';
+  signal prev     : std_logic := '0';
+begin
+  process(clk)
+  begin
+    if rising_edge(clk) then
+      if rst = '1' then
+        ff1  <= '0';
+        ff2  <= '0';
+        prev <= '0';
+      else
+        ff1  <= btn;
+        ff2  <= ff1;
+        prev <= ff2;
+      end if;
+    end if;
+  end process;
+
+  pulse <= ff2 and (not prev);
+end architecture;
+
+-- reg8_en.vhd
+library ieee;
+use ieee.std_logic_1164.all;
+
+entity reg8_en is
+  port (
+    clk : in  std_logic;
+    rst : in  std_logic; -- reset síncrono
+    en  : in  std_logic; -- carga cuando en=1 (pulso)
+    d   : in  std_logic_vector(7 downto 0);
+    q   : out std_logic_vector(7 downto 0)
+  );
+end entity;
+
+architecture rtl of reg8_en is
+  signal r : std_logic_vector(7 downto 0) := (others => '0');
+begin
+  process(clk)
+  begin
+    if rising_edge(clk) then
+      if rst = '1' then
+        r <= (others => '0');
+      else
+        if en = '1' then
+          r <= d;
+        end if;
+      end if;
+    end if;
+  end process;
+
+  q <= r;
+end architecture;
+
+-- reg8_en.vhd
+library ieee;
+use ieee.std_logic_1164.all;
+
+entity reg8_en is
+  port (
+    clk : in  std_logic;
+    rst : in  std_logic; -- reset síncrono
+    en  : in  std_logic; -- carga cuando en=1 (pulso)
+    d   : in  std_logic_vector(7 downto 0);
+    q   : out std_logic_vector(7 downto 0)
+  );
+end entity;
+
+architecture rtl of reg8_en is
+  signal r : std_logic_vector(7 downto 0) := (others => '0');
+begin
+  process(clk)
+  begin
+    if rising_edge(clk) then
+      if rst = '1' then
+        r <= (others => '0');
+      else
+        if en = '1' then
+          r <= d;
+        end if;
+      end if;
+    end if;
+  end process;
+
+  q <= r;
+end architecture;
+
+-- hex7seg_decoder.vhd
+-- seg = "abcdefg" activo-bajo (Basys3)
+library ieee;
+use ieee.std_logic_1164.all;
+
+entity hex7seg_decoder is
+  port (
+    x   : in  std_logic_vector(3 downto 0);
+    seg : out std_logic_vector(6 downto 0)
+  );
+end entity;
+
+architecture rtl of hex7seg_decoder is
+begin
+  process(x)
+  begin
+    case x is
+      when "0000" => seg <= "0000001"; -- 0
+      when "0001" => seg <= "1001111"; -- 1
+      when "0010" => seg <= "0010010"; -- 2
+      when "0011" => seg <= "0000110"; -- 3
+      when "0100" => seg <= "1001100"; -- 4
+      when "0101" => seg <= "0100100"; -- 5
+      when "0110" => seg <= "0100000"; -- 6
+      when "0111" => seg <= "0001111"; -- 7
+      when "1000" => seg <= "0000000"; -- 8
+      when "1001" => seg <= "0000100"; -- 9
+      when "1010" => seg <= "0001000"; -- A
+      when "1011" => seg <= "1100000"; -- b
+      when "1100" => seg <= "0110001"; -- C
+      when "1101" => seg <= "1000010"; -- d
+      when "1110" => seg <= "0110000"; -- E
+      when "1111" => seg <= "0111000"; -- F
+      when others => seg <= "1111111";
+    end case;
+  end process;
+end architecture;
+
+-- disp_mux_2hex.vhd
+library ieee;
+use ieee.std_logic_1164.all;
+use ieee.numeric_std.all;
+
+entity disp_mux_2hex is
+  generic (
+    REFRESH_DIV : integer := 100_000  -- 100MHz/100000=1kHz (cambia dígito cada 1ms)
+  );
+  port (
+    clk : in  std_logic;
+    rst : in  std_logic;  -- reset síncrono
+    b0  : in  std_logic_vector(3 downto 0); -- nibble bajo
+    b1  : in  std_logic_vector(3 downto 0); -- nibble alto
+    an  : out std_logic_vector(3 downto 0); -- activo-bajo
+    seg : out std_logic_vector(6 downto 0); -- activo-bajo
+    dp  : out std_logic
+  );
+end entity;
+
+architecture rtl of disp_mux_2hex is
+  signal cnt    : unsigned(16 downto 0) := (others => '0');
+  signal sel    : std_logic := '0';
+  signal x_sel  : std_logic_vector(3 downto 0);
+
+  component hex7seg_decoder is
+    port ( x : in std_logic_vector(3 downto 0); seg : out std_logic_vector(6 downto 0) );
+  end component;
+
+begin
+  process(clk)
+  begin
+    if rising_edge(clk) then
+      if rst = '1' then
+        cnt <= (others => '0');
+        sel <= '0';
+      else
+        if cnt = to_unsigned(REFRESH_DIV - 1, cnt'length) then
+          cnt <= (others => '0');
+          sel <= not sel;
+        else
+          cnt <= cnt + 1;
+        end if;
+      end if;
+    end if;
+  end process;
+
+  x_sel <= b0 when sel = '0' else b1;
+
+  -- sel=0 -> AN0, sel=1 -> AN1 (los demás apagados)
+  an <= "1110" when sel = '0' else "1101";
+
+  dp <= '1'; -- apagado (activo-bajo)
+
+  U_DEC: hex7seg_decoder
+    port map ( x => x_sel, seg => seg );
+
+end architecture;
+
+-- top_registro_basys3_disp.vhd
+-- Basys3:
+-- SW7..SW0 -> D, BTNU -> LOAD, BTNC -> RST
+-- LED7..LED0 -> Q
+-- AN0 muestra Q(3:0), AN1 muestra Q(7:4)
+library ieee;
+use ieee.std_logic_1164.all;
+
+entity top_registro_basys3_disp is
+  port (
+    CLK100MHZ : in  std_logic;
+    BTNC      : in  std_logic;
+    BTNU      : in  std_logic;
+    SW        : in  std_logic_vector(7 downto 0);
+    LED       : out std_logic_vector(7 downto 0);
+    AN        : out std_logic_vector(3 downto 0);
+    SEG       : out std_logic_vector(6 downto 0);
+    DP        : out std_logic
+  );
+end entity;
+
+architecture structural of top_registro_basys3_disp is
+  signal load_pulse : std_logic;
+  signal q_s        : std_logic_vector(7 downto 0);
+
+  component btn_pulse is
+    port ( clk : in std_logic; rst : in std_logic; btn : in std_logic; pulse : out std_logic );
+  end component;
+
+  component reg8_en is
+    port (
+      clk : in std_logic; rst : in std_logic; en : in std_logic;
+      d   : in std_logic_vector(7 downto 0);
+      q   : out std_logic_vector(7 downto 0)
+    );
+  end component;
+
+  component disp_mux_2hex is
+    generic ( REFRESH_DIV : integer := 100_000 );
+    port (
+      clk : in std_logic; rst : in std_logic;
+      b0  : in std_logic_vector(3 downto 0);
+      b1  : in std_logic_vector(3 downto 0);
+      an  : out std_logic_vector(3 downto 0);
+      seg : out std_logic_vector(6 downto 0);
+      dp  : out std_logic
+    );
+  end component;
+
+begin
+  U_PULSE: btn_pulse
+    port map (
+      clk   => CLK100MHZ,
+      rst   => BTNC,
+      btn   => BTNU,
+      pulse => load_pulse
+    );
+
+  U_REG: reg8_en
+    port map (
+      clk => CLK100MHZ,
+      rst => BTNC,
+      en  => load_pulse,
+      d   => SW,
+      q   => q_s
+    );
+
+  LED <= q_s;
+
+  U_DISP: disp_mux_2hex
+    port map (
+      clk => CLK100MHZ,
+      rst => BTNC,
+      b0  => q_s(3 downto 0),
+      b1  => q_s(7 downto 4),
+      an  => AN,
+      seg => SEG,
+      dp  => DP
+    );
+
+end architecture;
